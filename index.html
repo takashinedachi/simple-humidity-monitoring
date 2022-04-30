@@ -1,0 +1,228 @@
+simple-humidity-monitoring
+- Arduino nano (Seeeduino nano)
+- DHT11
+- Grove RTC I2C
+- 1602A Display
+- Time, Date and Day
+
+=========
+
+// DHT11 temp_humidity
+
+#include <Adafruit_Sensor.h>
+#include <DHT.h>
+#include <LiquidCrystal.h>
+
+#define  DHTPIN 13 // which digital pin we're connected to
+
+LiquidCrystal lcd( 3, 5, 6, 7, 8, 9 );  // LCD 1692A monitor //SD uses 4, 11, 12, 13
+const int PIN_DHT = 13;
+DHT dht(PIN_DHT, DHT11); // DHT dht( PIN_DHT, DHT11 )->
+
+// RTC - SD card
+#include <SPI.h>
+#include <SD.h>                 // SD card
+#include <Wire.h>               // Include I2C library 
+#include <RTClib.h>
+
+RTC_DS1307 RTC;                         // RTC module
+
+const int chipSelect = 4;      // SD card
+
+void setup(void) {
+
+// LCD 1602A monitor
+  lcd.begin( 16, 2 );
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print(" Hello,");
+  lcd.setCursor(0, 1);
+  lcd.print("temp humidity");
+  delay(500);
+
+  Serial.begin(9600);  //Start serial output 
+  Serial.println("DHT11");
+  dht.begin();
+
+  Wire.begin(); // Initialize I2C 
+  RTC.begin(); // Initialize RTC 
+  Serial.begin(9600);  //Start serial output 
+  Serial.println("Start date, time and temperature"); // Output the welcome text on the serial monitor 
+
+ //RTC.adjust(DateTime(__DATE__, __TIME__)); //if clock is no correct, put it and remove 6 bellow
+  
+ if (! RTC.isrunning()) {   // Check whether RTC is running 
+                            // Set the current date and time if the clock is not yet running 
+   RTC.adjust(DateTime(__DATE__, __TIME__));
+   Serial.println("Real-time clock was started and set to system time. ");
+ }
+  else Serial.println("Real time clock is already running.");
+
+  lcd.begin( 16, 2 );
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print(" RTC ok");
+  lcd.setCursor(0, 1);
+  lcd.print(" started");
+  delay(500);
+
+pinMode(10, OUTPUT);
+   
+if(!SD.begin(chipSelect)){  // check SD card
+Serial.println("card faild, or not present");
+while(1){  //loop
+ }
+return;
+}
+if(SD.begin(chipSelect)){  // check SD card
+  lcd.begin( 16, 2 );
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print(" SD card ok");
+  lcd.setCursor(0, 1);
+  lcd.print(" Data logging");
+  delay(500);
+return;
+}
+
+Serial.println("card initialized");
+
+}
+
+void loop(){
+
+    DateTime now = RTC.now(); 
+    Serial.print(now.year(), DEC);
+    Serial.print("/");
+    Serial.print(now.month(), DEC);
+    Serial.print("/");
+    Serial.print(now.day(), DEC);
+    Serial.print(" ");
+    Serial.print(now.hour(), DEC);
+    Serial.print(":");
+    Serial.print(now.minute(), DEC);
+    Serial.print(":");
+    Serial.print(now.second(), DEC);
+    Serial.print(" "); 
+    delay(100);
+  
+  // Reading temperature or humidity takes about 250 milliseconds!
+  // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
+  int h = dht.readHumidity();
+  int t = dht.readTemperature();
+
+ Serial.print("Temp: ");
+ Serial.print(t,1);
+ Serial.print("C, Humidity: ");
+ Serial.print(h,1);
+ Serial.println("%");
+  delay(100);
+
+// Monitor Humidity
+  lcd.begin( 16, 2 );
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Temp: ");
+  lcd.print(t,1);
+  lcd.println(" DegreeC ");
+  lcd.setCursor(0, 1);
+  lcd.print("Humidity: ");
+  lcd.print(h,1);
+  lcd.println(" %  ");
+  delay(5000); // Wait 10 seconds for the next issue
+
+// Monitor clock
+  lcd.begin( 16, 2 );
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Date:");
+  lcd.setCursor(6, 0);
+  lcd.print(now.year(), DEC);
+  lcd.setCursor(10, 0);
+  lcd.print("/");
+  lcd.setCursor(11, 0);
+  lcd.print(now.month(), DEC);
+  lcd.setCursor(13, 0);
+  lcd.print("/");
+  lcd.setCursor(14, 0);
+  lcd.println(now.day(), DEC);
+  lcd.setCursor(0, 1);
+  lcd.print("Time: ");
+  lcd.setCursor(6, 1);
+  lcd.print(now.hour(), DEC);
+  lcd.setCursor(8, 1);
+  lcd.print(":");
+  lcd.setCursor(9, 1);
+  lcd.print(now.minute(), DEC);
+  lcd.setCursor(11, 1);
+  lcd.print(":");
+  lcd.setCursor(12, 1);
+  lcd.print(now.second(), DEC);
+  lcd.setCursor(14, 1);
+  lcd.println("  ");
+    
+  delay(3000); // Wait 3 seconds for the next issue
+
+  lcd.begin( 16, 2 );
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Day:");
+  lcd.setCursor(5, 0);
+int dayofweek = now.dayOfWeek();
+   switch(dayofweek){
+     case 1:
+     lcd.print("Monday");
+     break;
+     case 2:
+     lcd.print("Tuesday");
+     break;
+     case 3:
+     lcd.print("Wednesday");
+     break;
+     case 4:
+     lcd.print("Thursday");
+     break;
+     case 5:
+     lcd.print("Friday");
+     break;
+     case 6:
+     lcd.print("Saturday");
+     break;
+     case 0:
+     lcd.print("Sunday");
+     break;
+   }
+  delay(3000); // Wait 3 seconds for the next issue
+
+
+// SD logger
+File dataFile = SD.open("datalog_humidity.txt", FILE_WRITE);
+
+// RTC
+dataFile.print(now.year(), DEC);
+dataFile.print("/");
+dataFile.print(now.month(), DEC);
+dataFile.print("/");
+dataFile.print(now.day(), DEC);
+dataFile.print(" ");
+dataFile.print(now.hour(), DEC);
+dataFile.print(":");
+dataFile.print(now.minute(), DEC);
+dataFile.print(":");
+dataFile.print(now.second(), DEC);
+dataFile.print(",");
+
+dataFile.print("Temperature");
+dataFile.print(",");
+dataFile.print(t,1);
+dataFile.print(",");
+dataFile.print("degreeC");
+dataFile.print(",");
+dataFile.print("Humidity");
+dataFile.print(",");
+dataFile.print(h,1);
+dataFile.println("%");
+dataFile.close();
+  delay(100);
+}
+
